@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:global_state/controllers/task_controller.dart';
-import 'package:global_state/models/task.dart';
+import 'package:global_state/controllers/quotation_controller.dart';
+import 'package:global_state/models/quotation.dart';
 
 class HomeScreen extends StatelessWidget {
-  final TaskController controller = Get.put(TaskController());
+  final QuotationController controller =
+      Get.put(QuotationController());
 
   HomeScreen({super.key});
 
-  Color _priorityColor(String priority) {
-    switch (priority) {
-      case 'alta':
-        return Colors.red;
-      case 'media':
-        return Colors.orange;
-      default:
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'aprobada':
         return Colors.green;
+      case 'cancelada':
+        return Colors.red;
+      default:
+        return Colors.orange;
     }
   }
 
@@ -23,30 +24,30 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gestión de Tareas'),
+        title: const Text('Sistema de Cotizaciones'),
         centerTitle: true,
       ),
       body: Obx(() {
-        if (controller.tasks.isEmpty) {
+        if (controller.quotations.isEmpty) {
           return const Center(
             child: Text(
-              "No hay tareas registradas",
+              "No hay cotizaciones registradas",
               style: TextStyle(fontSize: 18),
             ),
           );
         }
 
         return ListView.builder(
-          itemCount: controller.tasks.length,
+          itemCount: controller.quotations.length,
           itemBuilder: (context, index) {
-            final task = controller.tasks[index];
+            final quotation = controller.quotations[index];
 
             return Card(
               margin: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 6),
               child: ListTile(
                 title: Text(
-                  task.title,
+                  quotation.clientName,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold),
                 ),
@@ -54,27 +55,29 @@ class HomeScreen extends StatelessWidget {
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
                   children: [
-                    Text(task.description),
-                    const SizedBox(height: 6),
+                    Text("Producto: ${quotation.product}"),
+                    Text("Cantidad: ${quotation.quantity}"),
+                    Text(
+                        "Total: \$${quotation.total.toStringAsFixed(2)}"),
                     Row(
                       children: [
                         const Text("Estado: "),
                         DropdownButton<String>(
-                          value: task.status,
+                          value: quotation.status,
                           items: const [
                             DropdownMenuItem(
                                 value: "pendiente",
                                 child: Text("Pendiente")),
                             DropdownMenuItem(
-                                value: "proceso",
-                                child: Text("En proceso")),
+                                value: "aprobada",
+                                child: Text("Aprobada")),
                             DropdownMenuItem(
-                                value: "finalizada",
-                                child: Text("Finalizada")),
+                                value: "cancelada",
+                                child: Text("Cancelada")),
                           ],
                           onChanged: (value) {
                             controller.updateStatus(
-                                task.id, value!);
+                                quotation.id, value!);
                           },
                         ),
                       ],
@@ -89,16 +92,17 @@ class HomeScreen extends StatelessWidget {
                       width: 12,
                       height: 12,
                       decoration: BoxDecoration(
-                        color:
-                            _priorityColor(task.priority),
+                        color: _statusColor(
+                            quotation.status),
                         shape: BoxShape.circle,
                       ),
                     ),
                     IconButton(
-                      icon:
-                          const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () =>
-                          controller.deleteTask(task.id),
+                      icon: const Icon(Icons.delete,
+                          color: Colors.red),
+                      onPressed: () => controller
+                          .deleteQuotation(
+                              quotation.id),
                     ),
                   ],
                 ),
@@ -115,55 +119,55 @@ class HomeScreen extends StatelessWidget {
   }
 
   void _showAddDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
-    String priority = "media";
+    final clientController = TextEditingController();
+    final productController = TextEditingController();
+    final quantityController = TextEditingController();
+    final priceController = TextEditingController();
 
     Get.defaultDialog(
-      title: "Nueva Tarea",
-      content: Column(
-        children: [
-          TextField(
-            controller: titleController,
-            decoration:
-                const InputDecoration(labelText: "Título"),
-          ),
-          TextField(
-            controller: descriptionController,
-            decoration: const InputDecoration(
-                labelText: "Descripción"),
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            value: priority,
-            items: const [
-              DropdownMenuItem(
-                  value: "baja", child: Text("Baja")),
-              DropdownMenuItem(
-                  value: "media", child: Text("Media")),
-              DropdownMenuItem(
-                  value: "alta", child: Text("Alta")),
-            ],
-            onChanged: (value) {
-              priority = value!;
-            },
-            decoration:
-                const InputDecoration(labelText: "Prioridad"),
-          ),
-        ],
+      title: "Nueva Cotización",
+      content: SingleChildScrollView(
+        child: Column(
+          children: [
+            TextField(
+              controller: clientController,
+              decoration:
+                  const InputDecoration(labelText: "Cliente"),
+            ),
+            TextField(
+              controller: productController,
+              decoration:
+                  const InputDecoration(labelText: "Producto"),
+            ),
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              decoration:
+                  const InputDecoration(labelText: "Cantidad"),
+            ),
+            TextField(
+              controller: priceController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration:
+                  const InputDecoration(labelText: "Precio Unitario"),
+            ),
+          ],
+        ),
       ),
       textConfirm: "Guardar",
       textCancel: "Cancelar",
       onConfirm: () {
-        final newTask = Task(
+        final newQuotation = Quotation(
           id: DateTime.now().millisecondsSinceEpoch,
-          title: titleController.text,
-          description: descriptionController.text,
+          clientName: clientController.text,
+          product: productController.text,
+          quantity: int.parse(quantityController.text),
+          unitPrice: double.parse(priceController.text),
           status: "pendiente",
-          priority: priority,
         );
 
-        controller.addTask(newTask);
+        controller.addQuotation(newQuotation);
         Get.back();
       },
     );
